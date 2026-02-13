@@ -18,6 +18,7 @@ NETCDF_C_VERSION=4.9.3
 NETCDF_F_VERSION=4.6.2
 
 NCORES=$(sysctl -n hw.ncpu)
+PACKAGES_DIR=${PACKAGES_DIR:-$HOME/packages}
 
 # Package URLs
 OPENMPI_URL="https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-${OPENMPI_VERSION}.tar.gz"
@@ -35,6 +36,65 @@ print_error() {
 
 print_warning() {
     echo -e "${YELLOW}WARNING:${NC} $1"
+}
+
+show_help() {
+    cat << EOF
+E3SM Libraries Installation Script
+===================================
+
+Automated installation of required libraries for building E3SM on macOS with GCC 11.
+
+Libraries installed:
+  - OpenMPI ${OPENMPI_VERSION} (parallel computing)
+  - HDF5 ${HDF5_VERSION} (data format with parallel I/O)
+  - NetCDF-C ${NETCDF_C_VERSION} (climate data format with parallel support)
+  - NetCDF-Fortran ${NETCDF_F_VERSION} (Fortran interface to NetCDF)
+
+Usage:
+  $0 [OPTIONS] [COMMAND]
+
+Options:
+  -h, --help              Show this help message
+  -p, --packages-dir DIR  Directory for downloading/building packages
+                          (default: \$HOME/packages)
+  -i, --install-dir DIR   Installation directory
+                          (default: \$HOME/local/gcc11)
+
+Commands:
+  all              Install all packages (default in interactive mode)
+  openmpi          Install OpenMPI only
+  hdf5             Install HDF5 only
+  netcdf-c         Install NetCDF-C only
+  netcdf-fortran   Install NetCDF-Fortran only
+  verify           Verify installation
+  check            Check prerequisites
+
+Examples:
+  # Interactive mode
+  $0
+
+  # Install everything
+  $0 all
+
+  # Install to custom directories
+  $0 --packages-dir /tmp/builds --install-dir /opt/e3sm all
+
+  # Install specific package
+  $0 openmpi
+
+  # Verify existing installation
+  $0 verify
+
+Environment Variables:
+  INSTALL_PREFIX    Installation directory (default: \$HOME/local/gcc11)
+  PACKAGES_DIR      Build directory (default: \$HOME/packages)
+  SDKROOT          macOS SDK path (auto-detected)
+
+Note: Run without arguments for interactive menu mode.
+
+EOF
+    exit 0
 }
 
 check_prerequisites() {
@@ -76,7 +136,7 @@ install_openmpi() {
         return 0
     fi
     
-    cd ~/packages
+    cd "$PACKAGES_DIR"
     if [ ! -f "openmpi-${OPENMPI_VERSION}.tar.gz" ]; then
         curl -LO "$OPENMPI_URL"
     fi
@@ -112,7 +172,7 @@ install_hdf5() {
         return 0
     fi
     
-    cd ~/packages
+    cd "$PACKAGES_DIR"
     if [ ! -f "hdf5-${HDF5_VERSION}.tar.gz" ]; then
         curl -LO "$HDF5_URL"
     fi
@@ -142,7 +202,7 @@ install_netcdf_c() {
         return 0
     fi
     
-    cd ~/packages
+    cd "$PACKAGES_DIR"
     if [ ! -f "v${NETCDF_C_VERSION}.tar.gz" ]; then
         curl -LO "$NETCDF_C_URL"
     fi
@@ -175,7 +235,7 @@ install_netcdf_fortran() {
         return 0
     fi
     
-    cd ~/packages
+    cd "$PACKAGES_DIR"
     if [ ! -f "v${NETCDF_F_VERSION}.tar.gz" ]; then
         curl -LO "$NETCDF_F_URL"
     fi
@@ -260,6 +320,7 @@ show_menu() {
     echo "E3SM Libraries Installation Script"
     echo "==================================="
     echo "Installation prefix: $INSTALL_PREFIX"
+    echo "Packages directory: $PACKAGES_DIR"
     echo ""
     echo "1) Install all packages (recommended)"
     echo "2) Install OpenMPI only"
@@ -274,11 +335,39 @@ show_menu() {
 }
 
 main() {
-    # Create directories
-    mkdir -p ~/packages
-    mkdir -p $INSTALL_PREFIX
+    # Parse command-line arguments
+    local command=""
     
-    if [ $# -eq 0 ]; then
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                show_help
+                ;;
+            -p|--packages-dir)
+                PACKAGES_DIR="$2"
+                shift 2
+                ;;
+            -i|--install-dir)
+                export INSTALL_PREFIX="$2"
+                shift 2
+                ;;
+            all|openmpi|hdf5|netcdf-c|netcdf-fortran|verify|check)
+                command="$1"
+                shift
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                echo "Use --help for usage information"
+                exit 1
+                ;;
+        esac
+    done
+    
+    # Create directories
+    mkdir -p "$PACKAGES_DIR"
+    mkdir -p "$INSTALL_PREFIX"
+    
+    if [ -z "$command" ]; then
         # Interactive mode
         while true; do
             show_menu
@@ -304,7 +393,7 @@ main() {
         done
     else
         # Command-line mode
-        case "$1" in
+        case "$command" in
             all)
                 check_prerequisites
                 install_openmpi
@@ -319,11 +408,6 @@ main() {
             netcdf-fortran) install_netcdf_fortran ;;
             verify) verify_installation ;;
             check) check_prerequisites ;;
-            *)
-                echo "Usage: $0 [all|openmpi|hdf5|netcdf-c|netcdf-fortran|verify|check]"
-                echo "Run without arguments for interactive mode"
-                exit 1
-                ;;
         esac
     fi
 }

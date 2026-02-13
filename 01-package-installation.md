@@ -16,27 +16,40 @@ For convenience, use the automated installation script [`scripts/install_e3sm_li
 
 ```bash
 # Clone or download this documentation repository
-cd ~/packages
+# No need to copy script - can run from anywhere!
 
-# Copy the script from the repo
-cp /path/to/mac-notes/scripts/install_e3sm_libs.sh .
-chmod +x install_e3sm_libs.sh
+# View help and library versions
+/path/to/mac-notes/scripts/install_e3sm_libs.sh --help
 
 # Option 1: Interactive mode (recommended for first time)
-./install_e3sm_libs.sh
+/path/to/mac-notes/scripts/install_e3sm_libs.sh
 
-# Option 2: Install everything at once
-./install_e3sm_libs.sh all
+# Option 2: Install everything at once (uses default ~/packages for builds)
+/path/to/mac-notes/scripts/install_e3sm_libs.sh all
 
-# Option 3: Install specific packages
-./install_e3sm_libs.sh openmpi
-./install_e3sm_libs.sh hdf5
-./install_e3sm_libs.sh netcdf-c
-./install_e3sm_libs.sh netcdf-fortran
+# Option 3: Specify custom build directory
+/path/to/mac-notes/scripts/install_e3sm_libs.sh --packages-dir /tmp/e3sm-builds all
+
+# Option 4: Custom build and install directories
+/path/to/mac-notes/scripts/install_e3sm_libs.sh \
+  --packages-dir /tmp/builds \
+  --install-dir /opt/e3sm \
+  all
+
+# Option 5: Install specific packages
+/path/to/mac-notes/scripts/install_e3sm_libs.sh openmpi
+/path/to/mac-notes/scripts/install_e3sm_libs.sh hdf5
+/path/to/mac-notes/scripts/install_e3sm_libs.sh netcdf-c
+/path/to/mac-notes/scripts/install_e3sm_libs.sh netcdf-fortran
 
 # Verify installation
-./install_e3sm_libs.sh verify
+/path/to/mac-notes/scripts/install_e3sm_libs.sh verify
 ```
+
+**Command-line options:**
+- `-h, --help` - Show detailed help with library versions
+- `-p, --packages-dir DIR` - Build directory (default: `~/packages`)
+- `-i, --install-dir DIR` - Installation directory (default: `~/local/gcc11`)
 
 **Features:**
 - ✅ Checks prerequisites automatically
@@ -46,6 +59,8 @@ chmod +x install_e3sm_libs.sh
 - ✅ Verifies each installation
 - ✅ Provides shell configuration at the end
 - ✅ Interactive or command-line mode
+- ✅ **Run from anywhere** - no need to copy script
+- ✅ Customizable build and install directories
 - ✅ Color-coded output for easy reading
 
 **Time estimate:** 30-60 minutes for complete installation.
