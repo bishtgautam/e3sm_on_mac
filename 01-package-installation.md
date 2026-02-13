@@ -8,6 +8,54 @@ This guide covers installing all required libraries for compiling E3SM on macOS 
 - Homebrew package manager
 - At least 10GB of free disk space
 
+## Quick Start: Automated Installation Script
+
+For convenience, use the automated installation script [`scripts/install_e3sm_libs.sh`](scripts/install_e3sm_libs.sh) that handles all packages in one go or step-by-step.
+
+**Download and run the script:**
+
+```bash
+# Clone or download this documentation repository
+cd ~/packages
+
+# Copy the script from the repo
+cp /path/to/mac-notes/scripts/install_e3sm_libs.sh .
+chmod +x install_e3sm_libs.sh
+
+# Option 1: Interactive mode (recommended for first time)
+./install_e3sm_libs.sh
+
+# Option 2: Install everything at once
+./install_e3sm_libs.sh all
+
+# Option 3: Install specific packages
+./install_e3sm_libs.sh openmpi
+./install_e3sm_libs.sh hdf5
+./install_e3sm_libs.sh netcdf-c
+./install_e3sm_libs.sh netcdf-fortran
+
+# Verify installation
+./install_e3sm_libs.sh verify
+```
+
+**Features:**
+- ✅ Checks prerequisites automatically
+- ✅ Downloads packages if not already present
+- ✅ Skips already-installed packages
+- ✅ Uses all available CPU cores for compilation
+- ✅ Verifies each installation
+- ✅ Provides shell configuration at the end
+- ✅ Interactive or command-line mode
+- ✅ Color-coded output for easy reading
+
+**Time estimate:** 30-60 minutes for complete installation.
+
+---
+
+## Manual Installation (Step-by-Step)
+
+If you prefer to install packages manually or the script encounters issues, follow these detailed steps:
+
 ## Installation Directory Setup
 
 First, create a directory structure for your installations:
@@ -27,7 +75,7 @@ mkdir -p $INSTALL_PREFIX
 export INSTALL_PREFIX=$HOME/local/gcc11
 ```
 
-## Step 1: Install GCC 11
+## Manual Step 1: Install GCC 11
 
 E3SM requires a Fortran compiler. Install GCC 11 via Homebrew:
 
@@ -40,7 +88,7 @@ Verify the installation:
 gfortran-11 --version
 ```
 
-## Step 2: Set Up macOS SDK Path
+## Manual Step 2: Set Up macOS SDK Path
 
 GCC on macOS needs to know where to find system libraries. Set the SDK root:
 
@@ -55,7 +103,7 @@ export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
 export LIBRARY_PATH=$SDKROOT/usr/lib:$LIBRARY_PATH
 ```
 
-## Step 3: Install OpenMPI (Parallel Computing Library)
+## Manual Step 3: Install OpenMPI (Parallel Computing Library)
 
 OpenMPI must be installed **first** because HDF5 and NetCDF need MPI support.
 
@@ -93,7 +141,7 @@ $INSTALL_PREFIX/bin/mpicc --version
 $INSTALL_PREFIX/bin/mpif90 --version
 ```
 
-## Step 4: Install HDF5 with Parallel I/O
+## Manual Step 4: Install HDF5 with Parallel I/O
 
 ```bash
 cd ~/packages
@@ -120,7 +168,7 @@ Verify HDF5:
 $INSTALL_PREFIX/bin/h5pcc --version
 ```
 
-## Step 5: Install NetCDF-C with Parallel Support
+## Manual Step 5: Install NetCDF-C with Parallel Support
 
 ```bash
 cd ~/packages
@@ -151,7 +199,7 @@ Verify NetCDF-C has parallel support:
 $INSTALL_PREFIX/bin/nc-config --has-parallel4  # Should output "yes"
 ```
 
-## Step 6: Install NetCDF-Fortran
+## Manual Step 6: Install NetCDF-Fortran
 
 ```bash
 cd ~/packages
@@ -180,7 +228,7 @@ Verify NetCDF-Fortran:
 $INSTALL_PREFIX/bin/nf-config --version
 ```
 
-## Step 7: Set NetCDF Environment Variables
+## Manual Step 7: Set NetCDF Environment Variables
 
 E3SM's CIME build system needs to know where NetCDF is installed:
 
@@ -192,7 +240,7 @@ export NETCDF_FORTRAN_PATH=$INSTALL_PREFIX
 
 **Add these to your shell profile** so they're always available.
 
-## Final Verification
+## Manual Step 8: Final Verification
 
 Run these commands to verify all installations:
 
@@ -222,7 +270,7 @@ echo "PATH: $PATH"
 echo "NETCDF_PATH: $NETCDF_PATH"
 ```
 
-## Complete Shell Profile Configuration
+## Manual Step 9: Complete Shell Profile Configuration
 
 Add all these lines to your `~/.zshrc` (or `~/.bash_profile` for bash):
 
