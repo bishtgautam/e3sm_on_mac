@@ -82,12 +82,13 @@ This guide is organized into five sequential sections:
 
 ### 📜 Automation Scripts
 
-Two scripts are provided to streamline the setup process:
+Three scripts are provided to streamline the setup process:
 
 - **[`scripts/install_e3sm_libs.sh`](scripts/install_e3sm_libs.sh)** - Automates package compilation (see section 1)
 - **[`scripts/setup_cime_config.sh`](scripts/setup_cime_config.sh)** - Generates CIME configuration files (see section 2)
+- **[`scripts/brazil.sh`](scripts/brazil.sh)** - Creates and configures E3SM cases (see section 3)
 
-Both scripts support `--help` for detailed usage information and can be run from any directory.
+All scripts support `--help` for detailed usage information and can be run from any directory.
 
 ### 1. [Package Installation](01-package-installation.md) 📦
 

@@ -2,6 +2,34 @@
 
 This guide covers creating and compiling E3SM cases on macOS.
 
+## Quick Start (Automated)
+
+Use the automated script to create and configure a case:
+
+```bash
+# From anywhere - auto-detect E3SM root
+/path/to/mac-notes/scripts/brazil.sh
+
+# Specify E3SM location and build immediately
+/path/to/mac-notes/scripts/brazil.sh --e3sm-root ~/projects/e3sm/e3sm --build
+
+# Different resolution and submit after build
+/path/to/mac-notes/scripts/brazil.sh --res 1x1_mexicocityMEX --submit
+
+# See all options
+/path/to/mac-notes/scripts/brazil.sh --help
+```
+
+The script will:
+- Auto-detect your E3SM repository location (or use `--e3sm-root`)
+- Auto-detect machine name from CIME config
+- Generate case name with git hash and date
+- Set `DATM_CLMNCEP_YR_END=1948` to limit data download
+- Configure optimal settings for laptop development
+- Optionally build and submit the case
+
+**If you prefer manual case creation** or need to understand the details, continue with the sections below.
+
 ## Prerequisites
 
 Before proceeding, ensure you have:
@@ -85,7 +113,7 @@ cd $E3SM_ROOT/cime/scripts
 
 ### Example 1a: Recommended Setup Script for Brazil Case
 
-For easier case creation and configuration, use a setup script. Here's a complete example that creates and configures a Brazil single-point case:
+For easier case creation and configuration, use the automated script (see Quick Start section above), or create a custom setup script. Here's the manual approach that the automated script is based on:
 
 **Create `$E3SM_ROOT/cime/scripts/brazil.sh`:**
 
