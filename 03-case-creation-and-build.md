@@ -83,38 +83,69 @@ cd $E3SM_ROOT/cime/scripts
 - `--compiler`: Compiler to use (`gnu11`)
 - `--run-unsupported`: Required for custom machines
 
-### Example 2: Regional Atmospheric Case
+### Example 1a: Recommended Setup Script for Brazil Case
+
+For easier case creation and configuration, use a setup script. Here's a complete example that creates and configures a Brazil single-point case:
+
+**Create `$E3SM_ROOT/cime/scripts/brazil.sh`:**
 
 ```bash
-./create_newcase \
-    --case ~/projects/e3sm/cases/regional_atm \
-    --compset F2010 \
-    --res ne4_oQU240 \
-    --machine PNNL-L07D666226 \
-    --compiler gnu11 \
-    --run-unsupported
+#!/bin/sh
+
+RES=1x1_brazil
+COMPSET=I1850ELM
+MACH=PNNL-L07D666226  # Replace with your machine name
+COMPILER=gnu11
+
+SRC_DIR=$PWD/../../
+CASE_DIR=${SRC_DIR}/cime/scripts
+
+cd ${SRC_DIR}
+GIT_HASH=`git log -n 1 --format=%h`
+CASE_NAME=${RES}.${COMPSET}.${MACH}.${COMPILER}.${GIT_HASH}.`date "+%Y-%m-%d"`
+
+cd ${SRC_DIR}/cime/scripts
+
+./create_newcase -case ${CASE_DIR}/${CASE_NAME} \
+-res ${RES} -mach ${MACH} -compiler ${COMPILER} -compset ${COMPSET}
+
+cd ${CASE_DIR}/${CASE_NAME}
+
+# CRITICAL: Limit atmospheric forcing data to 1948 to avoid downloading 20+ years of data
+./xmlchange DATM_CLMNCEP_YR_END=1948
+
+# Configure I/O and MPI settings
+./xmlchange PIO_TYPENAME=netcdf
+./xmlchange MPILIB=openmpi
+./xmlchange PIO_VERSION=2
+
+# Use local run/build directories (easier to manage on laptops)
+./xmlchange RUNDIR=${PWD}/run
+./xmlchange EXEROOT=${PWD}/bld
+
+./case.setup
+
+# Uncomment to build immediately:
+# ./case.build
 ```
 
-### Popular Compsets for Development
+**Usage:**
 
-| Compset | Description | Components Active |
-|---------|-------------|-------------------|
-| I1850ELM | Land-only, 1850 conditions | ELM only |
-| I2000ELM | Land-only, year 2000 conditions | ELM only |
-| F2010 | Atmosphere + data ocean/ice | EAM, DOCN, DICE |
-| WCYCL1850 | Fully coupled, pre-industrial | All components |
-
-Find available compsets:
 ```bash
-./query_config --compsets elm   # Land model compsets
-./query_config --compsets atm   # Atmospheric compsets
+cd $E3SM_ROOT/cime/scripts
+chmod +x brazil.sh
+./brazil.sh
+
+# Case will be created with name like:
+# 1x1_brazil.I1850ELM.PNNL-L07D666226.gnu11.abc1234.2026-02-13
 ```
 
-Find available grids:
-```bash
-./query_config --grids          # All grids
-./query_config --grids 1x1      # Single-point grids only
-```
+**Key Benefits:**
+- ✅ Automatic case naming with git hash and date
+- ✅ **Limits data download** to 1 year (1948 only) instead of 20+ years
+- ✅ Sets optimal I/O configuration for laptops
+- ✅ Places run/build dirs within case for easy cleanup
+- ✅ Reproducible setup you can version control
 
 ## Configuring Your Case
 
@@ -158,6 +189,33 @@ Modify run duration and output frequency:
 # Enable short-term archiving
 ./xmlchange DOUT_S=TRUE
 ```
+
+### ⚠️ CRITICAL: Limit Atmospheric Forcing Data (Land-Only Cases)
+
+For land-only cases (I1850ELM, I2000ELM) using data atmosphere (DATM), **limit the forcing data years** to avoid downloading 20+ years of atmospheric forcing:
+
+```bash
+# IMPORTANT: Only download forcing for 1948 (default downloads 1948-1972 = ~20 years!)
+./xmlchange DATM_CLMNCEP_YR_END=1948
+```
+
+**Why this matters:**
+- **Default**: Downloads atmospheric forcing from 1948-1972 (~20 years)
+- **With this setting**: Downloads only 1948 (~1 year)
+- **Data savings**: Reduces download from ~10-20 GB to ~500 MB - 1 GB
+- **Download time**: Minutes instead of hours
+
+**For testing and development**, one year of forcing data is sufficient. The model will cycle through this year repeatedly. For production runs, you may want more years:
+
+```bash
+# For 5 years of forcing data
+./xmlchange DATM_CLMNCEP_YR_END=1952
+
+# For full dataset (20+ years)
+./xmlchange DATM_CLMNCEP_YR_END=1972
+```
+
+💡 **Pro tip**: Always set this BEFORE running `./check_input_data --download` to avoid unnecessary downloads.
 
 ### Modify Parallel Decomposition (For Laptops)
 
