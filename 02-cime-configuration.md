@@ -10,6 +10,29 @@ CIME (Common Infrastructure for Modeling the Earth) is E3SM's build and case man
 2. **Compiler definition** - specifies compiler flags and settings for GCC 11
 3. **Configuration files** - located in `~/.cime/` directory
 
+## Quick Start (Automated)
+
+Use the automated script to generate all configuration files:
+
+```bash
+# From anywhere
+/path/to/mac-notes/scripts/setup_cime_config.sh
+
+# Or with custom options
+/path/to/mac-notes/scripts/setup_cime_config.sh --machine MyMacBook --compiler gnu11
+
+# See all options
+/path/to/mac-notes/scripts/setup_cime_config.sh --help
+```
+
+The script will:
+- Auto-detect your hostname, CPU cores, and SDK location
+- Find full paths to all compilers (including MPI wrappers)
+- Generate all three required configuration files
+- Use your git user.name and user.email for the "SUPPORTED_BY" field
+
+**If you prefer manual configuration** or need to customize further, continue with the sections below.
+
 ## Directory Structure
 
 Create the CIME configuration directory:
