@@ -12,6 +12,12 @@ export INSTALL_PREFIX=${INSTALL_PREFIX:-$HOME/local/gcc11}
 export SDKROOT=${SDKROOT:-/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk}
 export LIBRARY_PATH=$SDKROOT/usr/lib:$LIBRARY_PATH
 
+# Set MACOSX_DEPLOYMENT_TARGET based on macOS version if not already set
+if [ -z "$MACOSX_DEPLOYMENT_TARGET" ]; then
+    MACOS_VERSION=$(sw_vers -productVersion | cut -d. -f1)
+    export MACOSX_DEPLOYMENT_TARGET="${MACOS_VERSION}.0"
+fi
+
 OPENMPI_VERSION=5.0.6
 PNETCDF_VERSION=1.12.3
 HDF5_VERSION=1.14.5
@@ -103,6 +109,9 @@ EOF
 
 check_prerequisites() {
     print_status "Checking prerequisites..."
+    
+    # Display macOS deployment target
+    print_status "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET}"
     
     # Check for Homebrew
     if ! command -v brew &> /dev/null; then
