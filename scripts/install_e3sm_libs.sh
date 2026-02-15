@@ -13,6 +13,7 @@ export SDKROOT=${SDKROOT:-/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk}
 export LIBRARY_PATH=$SDKROOT/usr/lib:$LIBRARY_PATH
 
 OPENMPI_VERSION=5.0.6
+PNETCDF_VERSION=1.12.3
 HDF5_VERSION=1.14.5
 NETCDF_C_VERSION=4.9.3
 NETCDF_F_VERSION=4.6.2
@@ -22,6 +23,7 @@ PACKAGES_DIR=${PACKAGES_DIR:-$HOME/packages}
 
 # Package URLs
 OPENMPI_URL="https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-${OPENMPI_VERSION}.tar.gz"
+PNETCDF_URL="https://parallel-netcdf.github.io/Release/pnetcdf-${PNETCDF_VERSION}.tar.gz"
 HDF5_URL="https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.14/hdf5-${HDF5_VERSION}/src/hdf5-${HDF5_VERSION}.tar.gz"
 NETCDF_C_URL="https://github.com/Unidata/netcdf-c/archive/refs/tags/v${NETCDF_C_VERSION}.tar.gz"
 NETCDF_F_URL="https://github.com/Unidata/netcdf-fortran/archive/refs/tags/v${NETCDF_F_VERSION}.tar.gz"
@@ -47,6 +49,7 @@ Automated installation of required libraries for building E3SM on macOS with GCC
 
 Libraries installed:
   - OpenMPI ${OPENMPI_VERSION} (parallel computing)
+  - PNetCDF ${PNETCDF_VERSION} (parallel NetCDF with classic format)
   - HDF5 ${HDF5_VERSION} (data format with parallel I/O)
   - NetCDF-C ${NETCDF_C_VERSION} (climate data format with parallel support)
   - NetCDF-Fortran ${NETCDF_F_VERSION} (Fortran interface to NetCDF)
@@ -64,6 +67,7 @@ Options:
 Commands:
   all              Install all packages (default in interactive mode)
   openmpi          Install OpenMPI only
+  pnetcdf          Install PNetCDF only
   hdf5             Install HDF5 only
   netcdf-c         Install NetCDF-C only
   netcdf-fortran   Install NetCDF-Fortran only
@@ -162,6 +166,45 @@ install_openmpi() {
     export DYLD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$DYLD_LIBRARY_PATH
     
     print_status "OpenMPI installed successfully"
+}
+
+install_pnetcdf() {
+    print_status "Installing PNetCDF ${PNETCDF_VERSION}..."
+    
+    if [ -f "$INSTALL_PREFIX/bin/pnetcdf-config" ]; then
+        print_warning "PNetCDF already installed, skipping"
+        return 0
+    fi
+    
+    cd "$PACKAGES_DIR"
+    if [ ! -f "pnetcdf-${PNETCDF_VERSION}.tar.gz" ]; then
+        curl -LO "$PNETCDF_URL"
+    fi
+    
+    tar -xzf pnetcdf-${PNETCDF_VERSION}.tar.gz
+    cd pnetcdf-${PNETCDF_VERSION}
+    
+    # Ensure macOS SDK libraries are available to the linker
+    export SDKROOT=$(xcrun --show-sdk-path)
+    export LIBRARY_PATH=$SDKROOT/usr/lib:$LIBRARY_PATH
+    
+    # Find gfortran library path
+    local GFORTRAN_LIB=$(gfortran-11 -print-file-name=libgfortran.dylib | xargs dirname)
+    
+    # Set combined linker flags
+    export LDFLAGS="-L$GFORTRAN_LIB -L$INSTALL_PREFIX/lib -L$SDKROOT/usr/lib"
+    
+    ./configure \
+        --prefix=$INSTALL_PREFIX \
+        CC=$INSTALL_PREFIX/bin/mpicc \
+        FC=$INSTALL_PREFIX/bin/mpif90 \
+        F77=$INSTALL_PREFIX/bin/mpif77
+    
+    make -j${NCORES}
+    make install
+    cd ..
+    
+    print_status "PNetCDF installed successfully"
 }
 
 install_hdf5() {
@@ -271,6 +314,14 @@ verify_installation() {
         all_ok=false
     fi
     
+    # Check PNetCDF
+    if [ -f "$INSTALL_PREFIX/bin/pnetcdf-config" ]; then
+        echo -e "${GREEN}✓${NC} PNetCDF: $($INSTALL_PREFIX/bin/pnetcdf-config --version)"
+    else
+        echo -e "${RED}✗${NC} PNetCDF: NOT FOUND"
+        all_ok=false
+    fi
+    
     # Check HDF5
     if [ -f "$INSTALL_PREFIX/bin/h5pcc" ]; then
         echo -e "${GREEN}✓${NC} HDF5: $($INSTALL_PREFIX/bin/h5pcc -showconfig | grep 'HDF5 Version' | cut -d: -f2)"
@@ -306,6 +357,7 @@ verify_installation() {
         echo "export PATH=\$INSTALL_PREFIX/bin:\$PATH"
         echo "export LD_LIBRARY_PATH=\$INSTALL_PREFIX/lib:\$LD_LIBRARY_PATH"
         echo "export DYLD_LIBRARY_PATH=\$INSTALL_PREFIX/lib:\$DYLD_LIBRARY_PATH"
+        echo "export PNETCDF_PATH=\$INSTALL_PREFIX"
         echo "export NETCDF_PATH=\$INSTALL_PREFIX"
         echo "export NETCDF_C_PATH=\$INSTALL_PREFIX"
         echo "export NETCDF_FORTRAN_PATH=\$INSTALL_PREFIX"
@@ -324,11 +376,12 @@ show_menu() {
     echo ""
     echo "1) Install all packages (recommended)"
     echo "2) Install OpenMPI only"
-    echo "3) Install HDF5 only"
-    echo "4) Install NetCDF-C only"
-    echo "5) Install NetCDF-Fortran only"
-    echo "6) Verify installation"
-    echo "7) Check prerequisites"
+    echo "3) Install PNetCDF only"
+    echo "4) Install HDF5 only"
+    echo "5) Install NetCDF-C only"
+    echo "6) Install NetCDF-Fortran only"
+    echo "7) Verify installation"
+    echo "8) Check prerequisites"
     echo "0) Exit"
     echo ""
     read -p "Choose an option: " choice
@@ -351,7 +404,7 @@ main() {
                 export INSTALL_PREFIX="$2"
                 shift 2
                 ;;
-            all|openmpi|hdf5|netcdf-c|netcdf-fortran|verify|check)
+            all|openmpi|pnetcdf|hdf5|netcdf-c|netcdf-fortran|verify|check)
                 command="$1"
                 shift
                 ;;
@@ -375,6 +428,7 @@ main() {
                 1)
                     check_prerequisites
                     install_openmpi
+                    install_pnetcdf
                     install_hdf5
                     install_netcdf_c
                     install_netcdf_fortran
@@ -382,11 +436,12 @@ main() {
                     break
                     ;;
                 2) install_openmpi ;;
-                3) install_hdf5 ;;
-                4) install_netcdf_c ;;
-                5) install_netcdf_fortran ;;
-                6) verify_installation ;;
-                7) check_prerequisites ;;
+                3) install_pnetcdf ;;
+                4) install_hdf5 ;;
+                5) install_netcdf_c ;;
+                6) install_netcdf_fortran ;;
+                7) verify_installation ;;
+                8) check_prerequisites ;;
                 0) exit 0 ;;
                 *) print_error "Invalid option" ;;
             esac
@@ -397,12 +452,14 @@ main() {
             all)
                 check_prerequisites
                 install_openmpi
+                install_pnetcdf
                 install_hdf5
                 install_netcdf_c
                 install_netcdf_fortran
                 verify_installation
                 ;;
             openmpi) install_openmpi ;;
+            pnetcdf) install_pnetcdf ;;
             hdf5) install_hdf5 ;;
             netcdf-c) install_netcdf_c ;;
             netcdf-fortran) install_netcdf_fortran ;;
