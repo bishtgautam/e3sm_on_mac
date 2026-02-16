@@ -45,7 +45,7 @@ Options:
 Generated Files:
   ~/.cime/config_machines.xml
   ~/.cime/config_compilers.xml
-  ~/.cime/cmake_macros/<compiler>_<machine>.cmake
+  ~/.cime/<compiler>_<machine>.cmake
 
 Examples:
   # Auto-detect everything
@@ -224,7 +224,7 @@ EOF
 }
 
 generate_cmake_macros() {
-    local output_file="$HOME/.cime/cmake_macros/${COMPILER_NAME}_${MACHINE_NAME}.cmake"
+    local output_file="$HOME/.cime/${COMPILER_NAME}_${MACHINE_NAME}.cmake"
     
     if [ -f "$output_file" ] && [ "$FORCE" != "true" ]; then
         print_warning "File exists: $output_file"
@@ -251,6 +251,7 @@ string(APPEND CMAKE_EXE_LINKER_FLAGS " -framework Accelerate")
 
 # Fortran compiler flags
 string(APPEND CMAKE_Fortran_FLAGS " -DCPRGNU")
+string(APPEND CMAKE_Fortran_FLAGS " -DFORTRANUNDERSCORE")
 string(APPEND CMAKE_Fortran_FLAGS " -DNO_IEEE_ARITHMETIC")
 string(APPEND CMAKE_Fortran_FLAGS " -fallow-argument-mismatch")
 string(APPEND CMAKE_Fortran_FLAGS " -fallow-invalid-boz")
@@ -284,7 +285,7 @@ show_summary() {
     echo "Generated files:"
     echo "  - ~/.cime/config_machines.xml"
     echo "  - ~/.cime/config_compilers.xml"
-    echo "  - ~/.cime/cmake_macros/${COMPILER_NAME}_${MACHINE_NAME}.cmake"
+    echo "  - ~/.cime/${COMPILER_NAME}_${MACHINE_NAME}.cmake"
     echo ""
     print_info "Machine name: $MACHINE_NAME"
     print_info "Compiler: $COMPILER_NAME"
@@ -355,7 +356,7 @@ main() {
     fi
     
     # Create directories
-    mkdir -p "$HOME/.cime/cmake_macros"
+    mkdir -p "$HOME/.cime"
     
     # Generate configuration files
     generate_config_machines

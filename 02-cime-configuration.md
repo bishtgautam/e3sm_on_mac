@@ -45,10 +45,10 @@ cd ~/.cime
 Your `~/.cime/` directory will contain:
 - `config_machines.xml` - defines your machine
 - `config_compilers.xml` - defines compiler settings
-- `cmake_macros/` - directory for CMake compiler macros
+- `<compiler>_<machine>.cmake` - CMake compiler macros
 
 ```bash
-mkdir -p ~/.cime/cmake_macros
+mkdir -p ~/.cime
 ```
 
 ## Step 1: Create Machine Definition
@@ -127,7 +127,7 @@ Create `~/.cime/config_compilers.xml`:
 
 This is the **most critical file** - it contains all the compiler flags needed for a successful build on macOS.
 
-Create `~/.cime/cmake_macros/gnu11_PNNL-L07D666226.cmake`:
+Create `~/.cime/gnu11_PNNL-L07D666226.cmake`:
 
 ```cmake
 set(MPICC "mpicc")
@@ -142,6 +142,7 @@ string(APPEND CMAKE_EXE_LINKER_FLAGS " -framework Accelerate")
 
 # Fortran compiler flags
 string(APPEND CMAKE_Fortran_FLAGS " -DCPRGNU")
+string(APPEND CMAKE_Fortran_FLAGS " -DFORTRANUNDERSCORE")
 string(APPEND CMAKE_Fortran_FLAGS " -DNO_IEEE_ARITHMETIC")
 string(APPEND CMAKE_Fortran_FLAGS " -fallow-argument-mismatch")
 string(APPEND CMAKE_Fortran_FLAGS " -fallow-invalid-boz")
@@ -167,6 +168,8 @@ string(APPEND LDFLAGS " -L$ENV{INSTALL_PREFIX}/lib")
 
 **Important compiler flags explained:**
 
+- `-DCPRGNU`: Identifies GNU compiler preprocessor for conditional compilation
+- `-DFORTRANUNDERSCORE`: Ensures proper Fortran-C symbol name mangling (appends underscore)
 - `-DNO_IEEE_ARITHMETIC`: GCC 11 on macOS has incomplete IEEE arithmetic support
 - `-fallow-argument-mismatch`: Allows legacy Fortran code to compile with newer GCC
 - `-fallow-invalid-boz`: Allows binary/octal/hex constants in older code
