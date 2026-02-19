@@ -12,6 +12,7 @@ export INSTALL_PREFIX=${INSTALL_PREFIX:-$HOME/local/gcc11}
 export SDKROOT=${SDKROOT:-/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk}
 export LIBRARY_PATH=$SDKROOT/usr/lib:$LIBRARY_PATH
 
+LIBEVENT_VERSION=2.1.12-stable
 OPENMPI_VERSION=5.0.6
 PNETCDF_VERSION=1.12.3
 HDF5_VERSION=1.14.5
@@ -22,6 +23,7 @@ NCORES=$(sysctl -n hw.ncpu)
 PACKAGES_DIR=${PACKAGES_DIR:-$HOME/packages}
 
 # Package URLs
+LIBEVENT_URL="https://github.com/libevent/libevent/releases/download/release-${LIBEVENT_VERSION}/libevent-${LIBEVENT_VERSION}.tar.gz"
 OPENMPI_URL="https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-${OPENMPI_VERSION}.tar.gz"
 PNETCDF_URL="https://parallel-netcdf.github.io/Release/pnetcdf-${PNETCDF_VERSION}.tar.gz"
 HDF5_URL="https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.14/hdf5-${HDF5_VERSION}/src/hdf5-${HDF5_VERSION}.tar.gz"
@@ -132,6 +134,37 @@ check_prerequisites() {
     print_status "Prerequisites OK"
 }
 
+install_libevent() {
+    print_status "Installing libevent ${LIBEVENT_VERSION}..."
+    
+    if [ -f "$INSTALL_PREFIX/lib/libevent.a" ]; then
+        print_warning "libevent already installed, skipping"
+        return 0
+    fi
+    
+    cd "$PACKAGES_DIR"
+    if [ ! -f "libevent-${LIBEVENT_VERSION}.tar.gz" ]; then
+        curl -LO "$LIBEVENT_URL"
+    fi
+    
+    tar -xzf libevent-${LIBEVENT_VERSION}.tar.gz
+    cd libevent-${LIBEVENT_VERSION}
+    
+    ./configure \
+        --prefix=$INSTALL_PREFIX \
+        --disable-shared \
+        --enable-static \
+        --disable-openssl \
+        CC=clang \
+        CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
+    
+    make -j${NCORES}
+    make install
+    cd ..
+    
+    print_status "libevent installed successfully"
+}
+
 install_openmpi() {
     print_status "Installing OpenMPI ${OPENMPI_VERSION}..."
     
@@ -152,9 +185,14 @@ install_openmpi() {
         CC=clang \
         CXX=clang++ \
         FC=gfortran-11 \
+        CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+        CXXFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+        FCFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
         --prefix=$INSTALL_PREFIX \
         --enable-mpi-fortran=yes \
-        --with-libevent=internal
+        --with-libevent=$INSTALL_PREFIX \
+        --with-hwloc=internal \
+        --with-pmix=internal
     
     make -j${NCORES}
     make install
@@ -198,7 +236,9 @@ install_pnetcdf() {
         --prefix=$INSTALL_PREFIX \
         CC=$INSTALL_PREFIX/bin/mpicc \
         FC=$INSTALL_PREFIX/bin/mpif90 \
-        F77=$INSTALL_PREFIX/bin/mpif77
+        F77=$INSTALL_PREFIX/bin/mpif77 \
+        CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+        FCFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
     
     make -j${NCORES}
     make install
@@ -228,7 +268,9 @@ install_hdf5() {
         --enable-fortran \
         --enable-parallel \
         CC=$INSTALL_PREFIX/bin/mpicc \
-        FC=$INSTALL_PREFIX/bin/mpif90
+        FC=$INSTALL_PREFIX/bin/mpif90 \
+        CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+        FCFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
     
     make -j${NCORES}
     make install
@@ -261,7 +303,8 @@ install_netcdf_c() {
         --enable-netcdf4 \
         --enable-parallel4 \
         --disable-dap \
-        CC=$INSTALL_PREFIX/bin/mpicc
+        CC=$INSTALL_PREFIX/bin/mpicc \
+        CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
     
     make -j${NCORES}
     make install
@@ -292,7 +335,9 @@ install_netcdf_fortran() {
     ./configure \
         --prefix=$INSTALL_PREFIX \
         CC=$INSTALL_PREFIX/bin/mpicc \
-        FC=$INSTALL_PREFIX/bin/mpif90
+        FC=$INSTALL_PREFIX/bin/mpif90 \
+        CFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+        FCFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}"
     
     make -j${NCORES}
     make install
@@ -375,13 +420,14 @@ show_menu() {
     echo "Packages directory: $PACKAGES_DIR"
     echo ""
     echo "1) Install all packages (recommended)"
-    echo "2) Install OpenMPI only"
-    echo "3) Install PNetCDF only"
-    echo "4) Install HDF5 only"
-    echo "5) Install NetCDF-C only"
-    echo "6) Install NetCDF-Fortran only"
-    echo "7) Verify installation"
-    echo "8) Check prerequisites"
+    echo "2) Install libevent only"
+    echo "3) Install OpenMPI only"
+    echo "4) Install PNetCDF only"
+    echo "5) Install HDF5 only"
+    echo "6) Install NetCDF-C only"
+    echo "7) Install NetCDF-Fortran only"
+    echo "8) Verify installation"
+    echo "9) Check prerequisites"
     echo "0) Exit"
     echo ""
     read -p "Choose an option: " choice
@@ -404,7 +450,7 @@ main() {
                 export INSTALL_PREFIX="$2"
                 shift 2
                 ;;
-            all|openmpi|pnetcdf|hdf5|netcdf-c|netcdf-fortran|verify|check)
+            all|libevent|openmpi|pnetcdf|hdf5|netcdf-c|netcdf-fortran|verify|check)
                 command="$1"
                 shift
                 ;;
@@ -427,6 +473,7 @@ main() {
             case $choice in
                 1)
                     check_prerequisites
+                    install_libevent
                     install_openmpi
                     install_pnetcdf
                     install_hdf5
@@ -435,13 +482,14 @@ main() {
                     verify_installation
                     break
                     ;;
-                2) install_openmpi ;;
-                3) install_pnetcdf ;;
-                4) install_hdf5 ;;
-                5) install_netcdf_c ;;
-                6) install_netcdf_fortran ;;
-                7) verify_installation ;;
-                8) check_prerequisites ;;
+                2) install_libevent ;;
+                3) install_libevent && install_openmpi ;;
+                4) install_pnetcdf ;;
+                5) install_hdf5 ;;
+                6) install_netcdf_c ;;
+                7) install_netcdf_fortran ;;
+                8) verify_installation ;;
+                9) check_prerequisites ;;
                 0) exit 0 ;;
                 *) print_error "Invalid option" ;;
             esac
@@ -451,6 +499,7 @@ main() {
         case "$command" in
             all)
                 check_prerequisites
+                install_libevent
                 install_openmpi
                 install_pnetcdf
                 install_hdf5
@@ -458,7 +507,8 @@ main() {
                 install_netcdf_fortran
                 verify_installation
                 ;;
-            openmpi) install_openmpi ;;
+            libevent) install_libevent ;;
+            openmpi) install_libevent && install_openmpi ;;
             pnetcdf) install_pnetcdf ;;
             hdf5) install_hdf5 ;;
             netcdf-c) install_netcdf_c ;;
